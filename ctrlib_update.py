@@ -44,9 +44,19 @@ def get_current_version():
     versions.sort()
     return versions[-1]
 
+def _read_entry(zfile, filename):
+    entry = None
+    for e in zfile.namelist():
+        if e.endswith(filename):
+            if entry is not None:
+                raise ValueError(filename + " appears multiple times in the archive.")
+            entry = e
+    if entry is None:
+        raise ValueError(filename + " does not appear in the archive.")
+    return zfile.read(entry)
 
 def unpack_zip_entry(zfile, name, to):
-    data = zfile.read(name)
+    data = _read_entry(zfile, name)
     with Path(to).open('wb') as f:
         f.write(data)
 
@@ -87,14 +97,16 @@ def main():
         ctr_java_version = CTR_JAVA / str(version)
         ctr_java_version.mkdir(exist_ok=True)
 
+
+
         unpack_zip_entry(zipfile,
-                         name=folder_name + '/java/lib/CTRE_Phoenix.jar',
+                         name='java/lib/CTRE_Phoenix.jar',
                          to=(ctr_java_version / ('ctrlib-java-' + str(version) + '.jar')))
         unpack_zip_entry(zipfile,
-                         name=folder_name + '/java/lib/CTRE_Phoenix-sources.jar',
+                         name='java/lib/CTRE_Phoenix-sources.jar',
                          to=(ctr_java_version / ('ctrlib-java-' + str(version) + '-sources.jar')))
 
-        so_file = zipfile.read(folder_name + '/java/lib/libCTRE_PhoenixCCI.so')
+        so_file = _read_entry(zipfile, 'java/lib/libCTRE_PhoenixCCI.so')
         ctr_cpp_version = CTR_CPP / str(version)
         ctr_cpp_version.mkdir(exist_ok=True)
         zip_filename = (ctr_cpp_version / ('ctrlib-cpp-' + str(version) + '-linuxathena.zip'))
